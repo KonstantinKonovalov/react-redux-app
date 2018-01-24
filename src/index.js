@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { App } from './containers/App';
 
 class Welcome extends React.Component {
     constructor(props) {
@@ -20,6 +21,7 @@ class Welcome extends React.Component {
                 <h1>Welcome</h1>
                 <p>Hello {this.state.name}</p>
                 <input onChange={this.handleChange} defaultValue={this.state.name}/>
+                <App name="testt" />
             </div>
         )
     }
