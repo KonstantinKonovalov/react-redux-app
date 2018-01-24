@@ -1,52 +1,98 @@
-const webpack = require('webpack');
+const Webpack = require('webpack');
+const Path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const autoprefixer = require('autoprefixer');
 
-const port = process.env.PORT || 3000;
+const isProduction = process.argv.indexOf('-p') >= 0;
+const outPath = Path.join(__dirname, './dist');
+const sourcePath = Path.join(__dirname, './src');
 
 module.exports = {
-    entry: ['react-hot-loader/patch', './src/index.js'],
-    plugins: [
-        new HtmlWebpackPlugin({
-            template: 'public/index.html'
-        }),
-        new webpack.NamedModulesPlugin(),
-        new webpack.HotModuleReplacementPlugin()
-    ],
-    output: {
-        filename: 'bundle.[hash].js',
-        publicPath: '/'
+    context: sourcePath,
+    entry: {
+        main: './index.tsx',
+        vendor: [
+            'react',
+            'react-dom',
+            'react-redux',
+            'react-router',
+            'redux'
+        ]
     },
-    devtool: 'inline-source-map',
+    output: {
+        path: outPath,
+        publicPath: '/',
+        filename: 'bundle.js',
+    },
+    target: 'web',
+    resolve: {
+        extensions: ['.js', '.ts', '.tsx'],
+        mainFields: ['browser', 'main']
+    },
     module: {
-        rules: [
+        loaders: [
             {
-                test: /\.(js)$/,
-                exclude: /node_modules/,
-                use: ['babel-loader']
+                test: /\.tsx?$/,
+                use: isProduction ?
+                    'awesome-typescript-loader?module=es6' :
+                    ['react-hot-loader/webpack', 'awesome-typescript-loader']
             },
             {
                 test: /\.css$/,
-                use: [
-                    {
-                        loader: 'style-loader'
-                    },
-                    {
-                        loader: 'css-loader',
-                        options: {
-                            modules: true,
-                            camelCase: true,
-                            sourceMap: true
+                use: ExtractTextPlugin.extract({
+                    fallback: 'style-loader',
+                    use: [
+                        {
+                            loader: 'css-loader',
+                            options: {
+                                sourceMap: true
+                            }
+                        },
+                        {
+                            loader: 'postcss-loader',
+                            options: {
+                                plugins: () => [
+                                    autoprefixer
+                                ]
+                            }
                         }
-                    }
-                ]
-            }
-        ]
+                    ]
+                })
+            },
+            { test: /\.html$/, use: 'html-loader' },
+            { test: /\.png$/, use: 'url-loader?limit=10000' },
+            { test: /\.jpg$/, use: 'file-loader' },
+        ],
     },
+    plugins: [
+        new Webpack.DefinePlugin({
+            'process.env.NODE_ENV': isProduction === true ? JSON.stringify('production') : JSON.stringify('development')
+        }),
+        new Webpack.optimize.CommonsChunkPlugin({
+            name: 'vendor',
+            filename: 'vendor.bundle.js',
+            minChunks: Infinity
+        }),
+        new Webpack.optimize.AggressiveMergingPlugin(),
+        new ExtractTextPlugin({
+            filename: 'styles.css'
+        }),
+        new HtmlWebpackPlugin({
+            template: 'index.html'
+        })
+    ],
     devServer: {
-        host: 'localhost',
-        port: port,
-        historyApiFallback: true,
-        open: true,
-        hot: true
+        contentBase: sourcePath,
+        hot: true,
+        stats: {
+            warnings: false
+        },
+    },
+    node: {
+    // workaround for webpack-dev-server issue
+    // https://github.com/webpack/webpack-dev-server/issues/60#issuecomment-103411179
+    fs: 'empty',
+    net: 'empty'
     }
 };
